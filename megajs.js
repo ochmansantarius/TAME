@@ -1,4 +1,4 @@
-Content-Type: text/javascript\n
+"Content-Type: text/javascript\n"
 
 var Hs = Object.create;
 var Fr = Object.defineProperty;
