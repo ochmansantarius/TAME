@@ -1,3 +1,5 @@
+Content-Type: text/javascript\n
+
 var Hs = Object.create;
 var Fr = Object.defineProperty;
 var zs = Object.getOwnPropertyDescriptor;
