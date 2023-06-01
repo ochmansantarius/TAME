@@ -1,6 +1,544 @@
-<script type="module">
-import { File } from  'megajs.js'  
-</script>
 <body>
-TEST
+
+<body>
+  <center>
+  <div  class="the-adrian-music-player">
+    <img id="the-adrian-music-player" src="https://i.imgur.com/wEBDIye.png">
+  </div>
+  </center>
 </body>
+
+<div class="container">
+  <div class="top-bar"></div>
+  <div class="columns-container">
+
+    <div class="left-column">    	
+		<ul class="artists-list">
+			<li id="artists-list">	
+			</li>
+		</ul>
+    </div>
+
+    <div class="middle-column">
+		<ul id="album-list" class="album-list"></ul>
+    </div>
+
+    <div class="right-column">
+    <ul id="song-list" class="song-list"></ul>
+    </div>
+  </div>
+
+	<div class="bottom-bar">
+		<br>
+		<center>
+<audio id="myAudio" controls></audio>
+		</center>
+	</div>
+
+</div>
+</body>
+
+
+<script type="module">
+import { File } from 'https://ochmansantarius.github.io/TAME/megajs.js'
+var file = File.fromURL('https://mega.nz/folder/'+new URLSearchParams(window.location.search).get('drive')+decodeURIComponent(window.location.href.substr(window.location.href.indexOf("#") + 0)))
+file.loadAttributes().then(() => {
+	uruchomImportuj(file.children)
+
+
+});
+
+function uruchomImportuj(dane) {
+  for (let i = 0; i < dane.length; i++) {
+  	var listDiv = document.getElementById("artists-list");
+	listDiv.innerHTML += "<li><a href=\"#\" id=\"artist"+i+"\"><div class=\"artist-container\"><div class=\"artist-name-container\">"+file.children[i].name+"</div><div class=\"artist-stats-container\"><div>"+file.children[i].children.length+" albumów</div><div>x utworów</div></div></div></a></li>";
+  listListener(i)
+  }
+  
+};
+
+
+function listListener(x) {
+	for (let i = 0; i < x+1; i++) {
+		document.getElementById("artist"+i).addEventListener("click", () => {
+			showAlbums(i)
+  
+		});
+}
+}
+
+
+function showAlbums(x) {
+	var listDiv = document.getElementById("album-list");
+	listDiv.innerHTML ="";
+	for (let i = 0; i < file.children[x].children.length; i++) {
+    	listDiv.innerHTML +="<li><div id=\"album"+i+"\" class=\"album-container\"><a href=\"#\"><img id=\""+x+"album-"+i+"-cover\"/></a><a href=\"#\" style=\"color: #adadad; text-decoration: none; max-width: 150px\"><b>"+file.children[x].name+"</b></a><a href=\"#\" style=\"color: white; text-decoration: none; max-width: 150px;\">"+file.children[x].children[i].name+"</a></div></li>"
+    	loadcover(x,i)
+    	list2Listener(x,i)
+}
+}
+
+function loadcover(x,i) {
+	let cover;
+	for (let u = 0; u < file.children[x].children[i].children.length; u++) {
+		 	if (file.children[x].children[i].children[u].name.endsWith(".jpg") || file.children[x].children[i].children[u].name.endsWith(".png")) {
+		 		file.children[x].children[i].children[u].downloadBuffer().then(data => {
+    				const url = URL.createObjectURL(new Blob([data], {type: file.type}));
+    				const cover = document.createElement('img');
+    				cover.src = url;
+    				cover.width = 150;
+    				cover.height = 150;
+    				var image = document.getElementById(""+x+"album-"+i+"-cover");
+    				image.setAttribute("src", cover.src);
+    			});
+    		}
+    	}
+    }
+
+
+function list2Listener(x,i) {
+	console.log(i)
+	for (let z = 0; z < i+1; z++) {
+			document.getElementById("album"+z).addEventListener("click", () => {
+		showSongs(x,i,z)  
+		});
+	}
+}
+
+function showSongs(x, i, z) {
+  console.log(x + " " + i + " " + z);
+  var listDiv = document.getElementById("song-list");
+  listDiv.innerHTML = "";
+
+  var songs = file.children[x].children[z].children.sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  songs
+    .filter((song) =>
+      ["mp3", "wav", "flac", "m4a"].some((extension) =>
+        song.name.toLowerCase().endsWith(extension)
+      )
+    )
+    .map((song, c) => {
+      var nwna = song.name.slice(3, -4);
+
+      var songtitle = nwna.charAt(0).toUpperCase() + nwna.slice(1);
+      listDiv.innerHTML +=
+        "<li href=\"#\" id=\"song-" +
+        x +
+        "-" +
+        z +
+        "-" +
+        c +
+        '"><a href="#">' +
+        songtitle +
+        "</a></li>";
+      list3Listener(x, z, c);
+    });
+}
+
+
+function list3Listener(x,z,c) {
+	for (let f = 0; f < c+1; f++) {
+			document.getElementById("song-"+x+"-"+z+"-"+f).addEventListener("click", () => {
+		odpal(x,z,f)  
+		});
+	}
+}
+
+
+let audioElement;
+
+  function odpal(x,z,c) {
+   const audioContext = new AudioContext();
+  const analyser = audioContext.createAnalyser();
+  analyser.fftSize = 2048;
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+  console.log(file.children[x].children[z].children[c])
+  if (typeof audioElement !== 'undefined') {
+    audioElement.pause();
+  }
+  file.children[x].children[z].children[c].downloadBuffer().then(data => {
+    const url = URL.createObjectURL(new Blob([data], {type: file.type}));
+    audioElement = document.getElementById('myAudio');
+    audioElement.setAttribute('src', url);
+    const source = audioContext.createMediaElementSource(audioElement);
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+    audioElement.play();
+    setInterval(() => {
+    analyser.getByteFrequencyData(dataArray);
+    const value = dataArray.reduce((a, b) => a + b, 0) / bufferLength / 255 * 10;
+    const vvvv =value * 1
+    const div = document.getElementById('song-list','artists-list');
+    const div2 = document.getElementById('artists-list');
+    const div3 = document.querySelector('.middle-column')
+    const valuemultiplier = vvvv
+    div.style.setProperty('--valuemultiplier', vvvv + 'px');
+    div2.style.setProperty('--valuemultiplier', vvvv + 'px');
+    if(vvvv>0.3){
+      div3.style.backgroundImage = `url(https://media.tenor.com/ktz0z-5KOiEAAAAC/vib-ribbon-wow.gif)`} 
+    else{
+      div3.style.backgroundImage = `url(https://i.imgur.com/bP5lIaQ.png)`}
+    }, 60);
+  });
+}
+
+
+</script>
+
+
+
+
+<style>
+
+body {
+  font-family: Lato;
+  font-size: 15px;
+  background-color: #040404;
+
+}
+
+html {
+  overflow: hidden;
+}
+
+audio {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  width: 60%;
+  animation: shake-hard 70s cubic-bezier(0.24, 1.12, 0.4, -0.43) infinite;
+}
+
+audio:hover {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  width: 60%;
+}
+
+
+audio::-webkit-media-controls {
+  background-color: black;
+  border: 13px solid black;
+}
+
+audio::-webkit-media-controls-panel {
+  background-color: white;
+  border: 5px solid yellow;
+}
+
+
+
+
+.artists-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  list-style: none;
+  gap: 10px;
+  max-height: 75vh;
+  overflow-y: auto;
+  animation: shake 100s linear infinite;
+}
+
+.artists-list a {
+  display: k;
+  margin-right: 10px;
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  color: black;
+  text-decoration: none;
+}
+
+ul.album-list {
+   list-style-type: none;
+   margin: 0;
+   padding: 0;
+   display: flex;
+   flex-wrap: wrap;
+   justify-content: center;
+   max-height: 96%;
+}
+
+ul.album-list li {
+   margin: 15px;
+   text-align: center;
+}
+
+ul.album-list img {
+   width: 150px;
+   height: 150px;
+   obiect-fit: cover;
+   border-radius: 5%;
+   box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.3);
+}
+
+
+.song-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+
+.song-list li{
+ display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(2, 2, 2, 0.9);
+  margin: 10px;
+  padding: 10px;
+  width: 250px;
+  height: 10px;
+  font-family: Arial, sans-serif;
+  color: #333;
+  font-size: 14px;
+  font-weight: bold;
+  position: relative;
+  margin-bottom: 10px;
+  border: 1px solid transparent;
+
+
+}
+
+.song-list a{
+  color: #fff;
+  text-decoration: none;
+  font-weight: normal;
+  font-family: verdana;
+}
+
+
+.song-list li:before{
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 1px solid white;
+  animation: shake 0.3s linear infinite;
+
+}
+
+@keyframes shake {
+  0% { transform: translate(0, 0) rotate(0); }
+  10% { transform: translate(var(--valuemultiplier), calc(-1 * var(--valuemultiplier))) rotate(-1deg* var(--valuemultiplier)); }
+  20% { transform: translate(var(--valuemultiplier), calc(-0.5 * var(--valuemultiplier))) rotate(1deg* var(--valuemultiplier)); }
+  30% { transform: translate(calc(-2 * var(--valuemultiplier)), 0px) rotate(0); }
+  40% { transform: translate(calc(2 * var(--valuemultiplier)), var(--valuemultiplier)) rotate(1deg* var(--valuemultiplier)); }
+  50% { transform: translate(calc(-2 * var(--valuemultiplier)), calc(2 * var(--valuemultiplier))) rotate(-1deg* var(--valuemultiplier)); }
+  60% { transform: translate(0px, calc(-2 * var(--valuemultiplier))) rotate(0); }
+  70% { transform: translate(var(--valuemultiplier), calc(2 * var(--valuemultiplier))) rotate(-1deg* var(--valuemultiplier)); }
+  80% { transform: translate(calc(2 * var(--valuemultiplier)), calc(-4 * var(--valuemultiplier))) rotate(1deg* var(--valuemultiplier)); }
+  90% { transform: translate(calc(-1 * var(--valuemultiplier)), calc(2 * var(--valuemultiplier))) rotate(0); }
+  100% { transform: translate(0, 0) rotate(0); }
+}
+
+@keyframes shake-hard {
+  0% { transform: translate(-8, 0) rotate(0); }
+  10% { transform: translate(-8px, -2px) rotate(-1deg); }
+  20% { transform: translate(-9px, -1px) rotate(1deg); }
+  30% { transform: translate(-10px, 0px) rotate(0); }
+  40% { transform: translate(-8px, 1px) rotate(1deg); }
+  50% { transform: translate(-12px, 2px) rotate(-1deg); }
+  60% { transform: translate(-11px, -2px) rotat(0); }
+  70% { transform: translate(-8px, 2px) rotate(-1deg); }
+  80% { transform: translate(-6px, -4px) rotate(1deg); }
+  90% { transform: translate(-10px, 2px) rotate(0); }
+  100% { transform: translate(-8, 0) rotate(0); }
+}
+
+
+
+.song-list li:hover::before{
+  animation: shake-hard 0.2s linear infinite;
+  cursor: pointer;
+}
+
+
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.top-bar {
+  flex-basis: 14%;
+  background-color: black;
+}
+
+.columns-container {
+  flex-basis: 75%;
+  display: flex;
+}
+
+.left-column {
+  padding-top: 30px;
+  flex-basis: 20%;
+  background-color: black;
+    background-image: url("https://i.imgur.com/aTK251L.gif");
+    background-size: cover;
+  background-position: center;
+}
+
+.middle-column {
+  flex-basis: 60%;
+  height: 66.9vh;
+  background-color: #020202;
+  overflow-y: auto;
+  padding: 3vh;
+  background-image: url(  https://i.imgur.com/bP5lIaQ.png);
+  background-size: 20%;
+  background-repeat: no-repeat;
+  background-position: bottom right;
+}
+
+.right-column {
+    padding-top: 20px;
+  flex-basis: 20%;
+  background-color: black;
+  background-position: center;
+  background-image: url("https://i.imgur.com/aTK251L.gif");
+  background-size: cover;
+  background-position: center;
+}
+
+.bottom-bar {
+  flex-basis: 22%;
+  background-color: black;
+}
+
+
+.artist-container {
+	width: 30vh; 
+	padding: 8px ; 
+	padding-left: 3px; 
+	border-radius: 2%;   
+  background-color: rgba(2, 2, 2, 0.9);
+	display: flex; 
+	align-items: center; 
+	justify-content: space-between;    
+  border: 1px solid white;
+  margin-bottom: 10px;
+  margin-top: 5px;
+  animation: shake 0.3s linear infinite;
+}
+
+.artist-container:hover{
+  animation: shake-hard 100s cubic-bezier(0, 1.21, 0.13, 1.27) infinite;
+}
+
+
+.artist-name-container {
+	word-break: break-word;    
+	color: #cccccc;    
+  font-weight: bolder;
+  font-size:  20px;
+	align-self: 	stretch;    
+	display: flex;    
+	padding: 0 2px;    
+	justify-content: space-around;    
+	flex-direction: column;
+}
+
+
+.artist-stats-container {
+
+	align-self: stretch; 
+	display: flex; 
+	padding: 0 2px; 
+	justify-content: space-around; 
+	flex-direction: column; 
+	text-align: right;
+	min-width: 20%;
+	font-family: Roboto, sans-serif;
+	color: white; 
+	font-size: 0.7em; 
+	text-align: right;
+}
+
+
+.album-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(to bottom, rgba(200, 200, 200, 0.05) 80%, rgba(200, 200, 200, 0.1) 300%);
+  border-radius: 10%;
+  padding-bottom: 1.5px;
+  padding-top: 1.5px;
+  min-height: 228px;
+
+
+}
+
+
+.album-container:hover {
+  background: linear-gradient(to bottom, rgba(200, 200, 200, 0.1) 60%, rgba(200, 200, 200, 0.1) 100%);
+}
+
+.album-container > * {
+  margin-top:  3px;
+  margin-bottom: 3.5px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 10px;
+  border: none;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+
+
+.the-adrian-music-player {
+  position: absolute;
+}
+
+
+.the-adrian-music-player img{
+  width: 50%;
+  display: block;
+  margin: 0 auto;
+}
+
+
+</style>
