@@ -41,7 +41,7 @@
 
 <script type="module">
 import { File } from 'https://ochmansantarius.github.io/TAME/megajs.js'
-var file = File.fromURL('https://mega.nz/folder/'+new URLSearchParams(window.location.search).get('drive')+decodeURIComponent(window.location.href.substr(window.location.href.indexOf("#") + 0)))
+var file = File.fromURL('https://mega.nz/folder/'+new URLSearchParams(window.location.search).get('drive')+"#"+new URLSearchParams(window.location.search).get('p'))
 file.loadAttributes().then(() => {
 	uruchomImportuj(file.children)
 
